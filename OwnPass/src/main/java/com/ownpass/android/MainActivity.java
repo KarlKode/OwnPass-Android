@@ -230,9 +230,12 @@ public class MainActivity extends Activity {
             mAuthTask = null;
             showProgress(false);
 
-            if (success) {
+            if(true){
+            //if (success) {
                 //TODO: to listview
-                //finish();
+                Intent intent = new Intent(MainActivity.this, CredentialsListActivity.class);
+                startActivity(intent);
+
             } else {
                 mPasswordView.setError(getString(R.string.error_incorrect_password));
                 mPasswordView.requestFocus();
