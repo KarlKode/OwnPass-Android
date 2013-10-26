@@ -12,16 +12,14 @@ import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.KeyEvent;
-import android.view.Menu;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
-import android.widget.Button;
-import android.widget.EditText;
 import android.widget.TextView;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpPut;
 import org.apache.http.conn.scheme.Scheme;
 import org.apache.http.conn.scheme.SchemeRegistry;
 import org.apache.http.conn.ssl.SSLSocketFactory;
@@ -37,142 +35,72 @@ import java.io.IOException;
 import javax.net.ssl.HostnameVerifier;
 
 /**
- * Activity which displays a login screen to the user, offering registration as
- * well.
+ * Created by leo on 10/26/13.
  */
-public class RegisterActivity extends Activity {
-    private static final String TAG = "RegisterActivity";
+public class DeviceActivationActivity extends Activity {
+    private static final String TAG = "DeviceActivationActivity";
 
-    /**
-     * The default email to populate the email field with.
-     */
-    public static final String EXTRA_EMAIL = "com.example.android.authenticatordemo.extra.EMAIL";
-
-    /**
-     * Keep track of the login task to ensure we can cancel it if requested.
-     */
-    private RegistrationTask mAuthTask = null;
-
-    // Values for email and password at the time of the login attempt.
-    private String mEmail;
-    private String mPassword;
-    private String mPhoneNumber;
-
-    // UI references.
-    private EditText mEmailView;
-    private EditText mPasswordView;
-    private EditText mPasswordViewRetype;
-    private EditText mPhoneNumberView;
+    private TextView mLoginStatusMessageView;
 
     private View mLoginFormView;
     private View mLoginStatusView;
-    private TextView mLoginStatusMessageView;
-    private Button mRegisterButton;
+    private TextView mActivationCodeView;
+    private ActivationTask mActivationTask;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
+
+    private String mActivationCode;
+
+    public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_device_activation);
 
-        setContentView(R.layout.activity_register);
+        mActivationCodeView = (TextView) findViewById(R.id.activation_key);
 
-        // Set up the login form.
-        mEmail = getIntent().getStringExtra(EXTRA_EMAIL);
-        mEmailView = (EditText) findViewById(R.id.register_email);
-        mEmailView.setText(mEmail);
-        mRegisterButton = (Button) findViewById(R.id.register_button);
+        mLoginFormView = findViewById(R.id.activation_form);
+        mLoginStatusView = findViewById(R.id.activation_status);
+        mLoginStatusMessageView = (TextView) findViewById(R.id.activation_status_message);
 
-        mPasswordView = (EditText) findViewById(R.id.register_password);
-        mPasswordViewRetype = (EditText) findViewById(R.id.register_password_retype);
-        mPhoneNumberView = (EditText) findViewById(R.id.register_phone_number);
-
-        mPasswordView.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+        mActivationCodeView.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView textView, int id, KeyEvent keyEvent) {
-                if (id == R.id.register || id == EditorInfo.IME_NULL) {
-                    attemptRegister();
+                if (id == R.id.activate || id == EditorInfo.IME_NULL) {
+                    attemptActivate();
                     return true;
                 }
                 return false;
             }
         });
-
-        mLoginFormView = findViewById(R.id.register_form);
-        mLoginStatusView = findViewById(R.id.register_status);
-        mLoginStatusMessageView = (TextView) findViewById(R.id.register_status_message);
-
-        findViewById(R.id.register_button).setOnClickListener(new View.OnClickListener() {
+        findViewById(R.id.activate_button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(mPasswordView.getText().toString().compareTo(mPasswordViewRetype.getText().toString()) == 0){
-                    attemptRegister();
-                }else{
-                    mPasswordView.setError(getString(R.string.error_incorrect_password));
-                    mPasswordView.requestFocus();
-                }
-
+                attemptActivate();
             }
         });
+
     }
 
+    //194725
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        super.onCreateOptionsMenu(menu);
-        getMenuInflater().inflate(R.menu.login, menu);
-        return true;
-    }
-
-    /**
-     * Attempts to sign in or register the account specified by the login form.
-     * If there are form errors (invalid email, missing fields, etc.), the
-     * errors are presented and no actual login attempt is made.
-     */
-    public void attemptRegister() {
-        if (mAuthTask != null) {
+    public void attemptActivate() {
+        if (mActivationTask != null) {
             return;
         }
 
         // Reset errors.
-        mEmailView.setError(null);
-        mPasswordView.setError(null);
+        mActivationCodeView.setError(null);
 
         // Store values at the time of the login attempt.
-        mEmail = mEmailView.getText().toString();
-        mPassword = mPasswordView.getText().toString();
-        mPhoneNumber = mPhoneNumberView.getText().toString();
+        mActivationCode = mActivationCodeView.getText().toString();
 
         boolean cancel = false;
         View focusView = null;
 
         // Check for a valid password.
-        if (TextUtils.isEmpty(mPassword)) {
-            mPasswordView.setError(getString(R.string.error_field_required));
-            focusView = mPasswordView;
-            cancel = true;
-        } else if (mPassword.length() < 4) {
-            mPasswordView.setError(getString(R.string.error_invalid_password));
-            focusView = mPasswordView;
+        if (TextUtils.isEmpty(mActivationCode)) {
+            mActivationCodeView.setError(getString(R.string.error_field_required));
+            focusView = mActivationCodeView;
             cancel = true;
         }
-
-        // Check for a valid email address.
-        if (TextUtils.isEmpty(mEmail)) {
-            mEmailView.setError(getString(R.string.error_field_required));
-            focusView = mEmailView;
-            cancel = true;
-        } else if (!mEmail.contains("@")) {
-            mEmailView.setError(getString(R.string.error_invalid_email));
-            focusView = mEmailView;
-            cancel = true;
-        }
-
-        // Check for a valid email address.
-        if (TextUtils.isEmpty(mPhoneNumber)) {
-            mPhoneNumberView.setError(getString(R.string.error_field_required));
-            focusView = mPhoneNumberView;
-            cancel = true;
-        }
-
 
         if (cancel) {
             // There was an error; don't attempt login and focus the first
@@ -183,8 +111,8 @@ public class RegisterActivity extends Activity {
             // perform the user login attempt.
             mLoginStatusMessageView.setText(R.string.login_progress_signing_in);
             showProgress(true);
-            mAuthTask = new RegistrationTask();
-            mAuthTask.execute((Void) null);
+            mActivationTask = new ActivationTask();
+            mActivationTask.execute((Void) null);
         }
     }
 
@@ -232,12 +160,15 @@ public class RegisterActivity extends Activity {
      * Represents an asynchronous login/registration task used to authenticate
      * the user.
      */
-    public class RegistrationTask extends AsyncTask<Void, Void, Boolean> {
+    public class ActivationTask extends AsyncTask<Void, Void, Boolean> {
         @Override
         protected Boolean doInBackground(Void... params) {
             boolean successful = false;
 
-            HttpPost httppost = new HttpPost("https://ownpass.marcg.ch/users");
+            SharedPreferences prefs = getApplicationContext().getSharedPreferences("OwnPass", MODE_PRIVATE);
+            String device_id = prefs.getString("device_id", null);
+
+            HttpPut httpput = new HttpPut("https://ownpass.marcg.ch/devices/" + device_id);
             HostnameVerifier hostnameVerifier = org.apache.http.conn.ssl.SSLSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER;
 
             /* http://stackoverflow.com/questions/2012497/accepting-a-certificate-for-https-on-android/3904473#3904473 */
@@ -252,34 +183,28 @@ public class RegisterActivity extends Activity {
 
             try {
                 JSONObject json = new JSONObject();
-                json.put("email", mEmail);
-                json.put("password", Utilities.toBase64(mPassword));
-                json.put("phone", mPhoneNumber);
+                json.put("device", prefs.getString("device", null));
+                json.put("active", "true");
+                json.put("code", mActivationCode);
 
                 StringEntity se = new StringEntity(json.toString());
 
                 se.setContentEncoding("UTF-8");
                 se.setContentType("application/json");
 
-                httppost.setEntity(se);
+                String credentials = prefs.getString("email", null) + ":" + Utilities.generateSHAHash(prefs.getString("password", null));
+                String base64creds = Utilities.toBase64(credentials);
+
+                httpput.addHeader("Authorization", "Basic " + base64creds);
+                httpput.setEntity(se);
 
                 // Execute HTTP Post Request
-                HttpResponse response = httpclient.execute(httppost);
+                HttpResponse response = httpclient.execute(httpput);
                 String responseString = Utilities.convertStreamToString(response.getEntity().getContent());
                 Log.i(TAG, responseString);
 
                 if(response.getStatusLine().getStatusCode() == 200){
                     JSONObject o = new JSONObject(responseString);
-
-                    SharedPreferences.Editor editor = getApplicationContext().getSharedPreferences("OwnPass", MODE_PRIVATE).edit();
-
-                    editor.putInt("id", Integer.parseInt(o.get("id").toString()));
-                    editor.putString("email", o.get("email").toString());
-                    editor.putString("password", mPassword.toString());
-                    editor.putString("phone", o.get("phone").toString());
-
-                    editor.commit();
-
                     successful = true;
                 }else{
 
@@ -300,21 +225,21 @@ public class RegisterActivity extends Activity {
 
         @Override
         protected void onPostExecute(final Boolean success) {
-            mAuthTask = null;
+            mActivationTask = null;
             showProgress(false);
 
             if (success) {
-                Intent intent = new Intent(RegisterActivity.this, CredentialsListActivity.class);
+                Intent intent = new Intent(DeviceActivationActivity.this, CredentialsListActivity.class);
                 intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 startActivity(intent);
             } else {
-                mRegisterButton.setError(getString(R.string.error_registration_not_successful));
+                mActivationCodeView.setError(getString(R.string.error_activation_not_successful));
             }
         }
 
         @Override
         protected void onCancelled() {
-            mAuthTask = null;
+            mActivationTask = null;
             showProgress(false);
         }
     }

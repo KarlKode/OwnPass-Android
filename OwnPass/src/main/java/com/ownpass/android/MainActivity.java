@@ -5,16 +5,36 @@ import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
 import android.widget.TextView;
+
+import org.apache.http.HttpResponse;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.conn.scheme.Scheme;
+import org.apache.http.conn.scheme.SchemeRegistry;
+import org.apache.http.conn.ssl.SSLSocketFactory;
+import org.apache.http.conn.ssl.X509HostnameVerifier;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.conn.SingleClientConnManager;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
+
+import javax.net.ssl.HostnameVerifier;
 
 /**
  * Activity which displays a login screen to the user, offering registration as
@@ -50,6 +70,7 @@ public class MainActivity extends Activity {
     private View mLoginFormView;
     private View mLoginStatusView;
     private TextView mLoginStatusMessageView;
+    private static final String TAG = "MainActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -201,41 +222,88 @@ public class MainActivity extends Activity {
      * Represents an asynchronous login/registration task used to authenticate
      * the user.
      */
-    public class UserLoginTask extends AsyncTask<Void, Void, Boolean> {
+    public class UserLoginTask extends AsyncTask<Void, Void, Integer> {
         @Override
-        protected Boolean doInBackground(Void... params) {
-            // TODO: attempt authentication against a network service.
+        protected Integer doInBackground(Void... params) {
+            int successful = -1;
+
+            HttpGet httpget = new HttpGet("https://ownpass.marcg.ch/passwords");
+            HostnameVerifier hostnameVerifier = org.apache.http.conn.ssl.SSLSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER;
+
+            /* http://stackoverflow.com/questions/2012497/accepting-a-certificate-for-https-on-android/3904473#3904473 */
+            DefaultHttpClient client = new DefaultHttpClient();
+
+            SchemeRegistry registry = new SchemeRegistry();
+            SSLSocketFactory socketFactory = SSLSocketFactory.getSocketFactory();
+            socketFactory.setHostnameVerifier((X509HostnameVerifier) hostnameVerifier);
+            registry.register(new Scheme("https", socketFactory, 443));
+            SingleClientConnManager mgr = new SingleClientConnManager(client.getParams(), registry);
+            DefaultHttpClient httpclient = new DefaultHttpClient(mgr, client.getParams());
 
             try {
-                // Simulate network access.
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                return false;
-            }
+                String credentials = mEmail + ":" + Utilities.generateSHAHash(mPassword);
+                String base64creds = Utilities.toBase64(credentials);
+                httpget.addHeader("Authorization", "Basic " + base64creds);
 
-            for (String credential : DUMMY_CREDENTIALS) {
-                String[] pieces = credential.split(":");
-                if (pieces[0].equals(mEmail)) {
-                    // Account exists, return true if the password matches.
-                    return pieces[1].equals(mPassword);
+                Log.i(TAG, "base64creds: " + base64creds);
+
+                SharedPreferences.Editor editor = getApplicationContext().getSharedPreferences("OwnPass", MODE_PRIVATE).edit();
+                editor.putString("email", mEmail);
+                editor.putString("password", mPassword);
+
+                // Execute HTTP Post Request
+                HttpResponse response = httpclient.execute(httpget);
+                String responseString = Utilities.convertStreamToString(response.getEntity().getContent());
+                Log.i(TAG, responseString);
+
+                if(response.getStatusLine().getStatusCode() == 200){
+                    editor.putString("cred-list", responseString);
+                    editor.commit();
+
+                    successful = 200;
+                }else if(response.getStatusLine().getStatusCode() == 401){
+                    JSONObject o = new JSONObject(responseString);
+
+                    if(o.has("id")){
+                        //device not authorized
+                        editor.putString("device_id", o.get("id").toString());
+                        editor.putString("device", o.get("device").toString());
+                        editor.commit();
+
+                        successful = 401;
+                    }else{
+                       successful = -1;
+                    }
+                }else{
+                    System.out.println("Fehler!");
                 }
+            } catch (ClientProtocolException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            } catch (JSONException e) {
+                e.printStackTrace();
             }
 
             // TODO: register the new account here.
-            return true;
+            return successful;
         }
 
         @Override
-        protected void onPostExecute(final Boolean success) {
+        protected void onPostExecute(final Integer success) {
             mAuthTask = null;
             showProgress(false);
 
-            if(true){
+            if(success == 200){
             //if (success) {
                 //TODO: to listview
                 Intent intent = new Intent(MainActivity.this, CredentialsListActivity.class);
                 startActivity(intent);
-
+            } else if(success == 401){
+                Intent intent = new Intent(MainActivity.this, DeviceActivationActivity.class);
+                startActivity(intent);
             } else {
                 mPasswordView.setError(getString(R.string.error_incorrect_password));
                 mPasswordView.requestFocus();

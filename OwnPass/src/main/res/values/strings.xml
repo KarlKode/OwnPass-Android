@@ -15,11 +15,20 @@
     <string name="action_forgot_password">Recover lost password</string>
 
     <string name="login_progress_signing_in">Signing in&#8230;</string>
+    <string name="activation_progress">Activating device ...</string>
 
     <string name="error_invalid_email">This email address is invalid</string>
     <string name="error_invalid_password">This password is too short</string>
     <string name="error_incorrect_password">This password is incorrect</string>
     <string name="error_field_required">This field is required</string>
+    <string name="error_field_password_not_matching">The passwords do not match</string>
+    <string name="error_registration_not_successful">Registration not successful. Try again!</string>
+    <string name="error_activation_not_successful">Activation not successful</string>
+
     <string name="action_register">Register</string>
+    <string name="action_activate_short">Activate</string>
+
     <string name="reg_prompt_password">Retype password</string>
+    <string name="register_phone_number_hint">Phone number</string>
+    <string name="action_register_short">Register</string>
 </resources>

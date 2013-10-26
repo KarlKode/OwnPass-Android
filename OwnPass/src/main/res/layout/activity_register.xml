@@ -60,7 +60,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="textEmailAddress"
-                android:hint="@string/prompt_email" />
+                android:hint="@string/prompt_email"
+                android:text="leo@helmis.at" />
 
             <EditText
                 android:id="@+id/register_password"
@@ -70,9 +71,7 @@
                 android:layout_height="wrap_content"
                 android:hint="@string/prompt_password"
                 android:inputType="textPassword"
-                android:imeActionLabel="@string/action_sign_in_short"
-                android:imeActionId="@+id/register"
-                android:imeOptions="actionUnspecified" />
+                android:text="aaaaa" />
 
             <EditText
                 android:id="@+id/register_password_retype"
@@ -82,10 +81,21 @@
                 android:layout_height="wrap_content"
                 android:hint="@string/reg_prompt_password"
                 android:inputType="textPassword"
-                android:imeActionLabel="@string/action_sign_in_short"
-                android:imeActionId="@+id/register"
-                android:imeOptions="actionUnspecified" />
+                android:text="aaaaa" />
 
+            <EditText
+                android:id="@+id/register_phone_number"
+                android:singleLine="true"
+                android:maxLines="1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/register_phone_number_hint"
+                android:inputType="phone"
+                android:ems="10"
+                android:imeActionLabel="@string/action_register_short"
+                android:imeActionId="@+id/register"
+                android:imeOptions="actionUnspecified"
+                android:text="123" />
 
             <Button android:id="@+id/register_button"
                 android:layout_width="wrap_content"
@@ -95,6 +105,8 @@
                 android:paddingLeft="32dp"
                 android:paddingRight="32dp"
                 android:layout_gravity="right" />
+
+
 
         </LinearLayout>
     </ScrollView>

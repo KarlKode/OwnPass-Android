@@ -108,8 +108,6 @@
                     android:layout_gravity="right"
                     android:clickable="true"
                     android:onClick="buttonRegister_onClick" />
-
-
             </LinearLayout>
         </LinearLayout>
 
